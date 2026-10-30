@@ -1,0 +1,25 @@
+model Todo {
+    id          String         @id @default(uuid())
+    user_id     Int
+    subject     String
+    description String         @db.Text
+    shareable   Boolean        @default(false)
+    completed   completedState @default(incompleted)
+    status      Boolean        @default(false)
+    created_at  DateTime       @default(now())
+    updated_at  DateTime       @default(now())
+
+    user       Users               @relation(fields: [user_id], references: [id])
+    shareTodos SharedTodos[]
+    history    TodoHistoryShared[]
+
+    @@index([user_id, created_at])
+    @@index([user_id, completed])
+    @@map("todo")
+}
+
+enum completedState {
+    completed
+    progress
+    incompleted
+}

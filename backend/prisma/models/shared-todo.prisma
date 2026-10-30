@@ -1,0 +1,17 @@
+model SharedTodos {
+    id         String   @id @default(uuid())
+    todo_id    String
+    sender_id  Int
+    reciver_id Int
+    can_read   Boolean  @default(true)
+    can_write  Boolean  @default(false)
+    created_at DateTime @default(now())
+    updated_at DateTime @default(now())
+
+    todo Todo @relation(fields: [todo_id], references: [id])
+
+    sender   Users @relation("TodoShareSender", fields: [sender_id], references: [id])
+    receiver Users @relation("TodoReceiveSender", fields: [reciver_id], references: [id])
+
+    @@map("shared_todos")
+}

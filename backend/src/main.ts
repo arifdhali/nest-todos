@@ -18,7 +18,10 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({
       transform: true,
       whitelist: true,
-      forbidNonWhitelisted: true
+      forbidNonWhitelisted: true,
+      // exceptionFactory(errors) {
+      //   console.log(errors)
+      // },
     }))
 
 
@@ -26,7 +29,7 @@ async function bootstrap() {
     app.useGlobalInterceptors(new ResponseInterceptor())
     app.useGlobalFilters(new GlobalFiltersFilter())
     await app.listen(port ?? 3000);
-    console.log(`Application listening in port: ${port}`);
+    console.log(`Application listening in port: http://localhost:${port}`);
   } catch (error) {
     console.log('Applications bootstrap error', error)
     process.exit(1)

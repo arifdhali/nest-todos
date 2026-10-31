@@ -1,4 +1,4 @@
-import { Body, Controller, NotFoundException, Post, Req, Res } from '@nestjs/common';
+import { BadGatewayException, Body, Controller, NotFoundException, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { RegisterDto } from './dtos/register.dto.js';
 import { MetaResponse } from '../common/interceptor/response.interceptor.js';
 import { AuthService } from './auth.service.js';
@@ -6,6 +6,8 @@ import { LoginDto } from './dtos/login.dto.js';
 import type { Request, Response } from 'express';
 import ms, { StringValue } from 'ms';
 import { ConfigService } from '@nestjs/config';
+import { CurrentUser } from '../common/decorator/current-user.decorator.js';
+import { AuthGuard } from './guard/auth.guard.js';
 
 @Controller('auth')
 export class AuthController {
@@ -42,19 +44,40 @@ export class AuthController {
             path: "/auth/refresh",
             maxAge: expires
         })
-
+        console.log('Refresh Token',loggedIn.refresh_token)
         return {
             message: "Login successfull",
-            data: loggedIn.login_token
+            data: { token: loggedIn.login_token }
         }
     }
 
+
     @Post("refresh")
-    async refreshToken(@Res({ passthrough: true }) res: Response, @Req() request: Request) {
+    async refreshToken(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response, @Req() request: Request): Promise<MetaResponse> {
+
+        const refreshToken = request.headers.authorization?.split(" ")[1];
+        if (!refreshToken) {
+            throw new BadGatewayException("refreshToken token is required")
+        }
+        let newRefresh = await this.authService.refresh(refreshToken, 1);
+
+        let JWT_EXPIRES = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES');
+
+        let expires = ms(JWT_EXPIRES as StringValue);
+
+        res.cookie('refresh_token', newRefresh.refresh_token, {
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            httpOnly: true,
+            path: "/auth/refresh",
+            maxAge: expires
+        })
+        console.log('new_ref token', newRefresh.refresh_token)
+        return {
+            message: "Refresh token  rotate successfully",
+        }
 
 
-        console.log(request.cookies)
-        // let newRefresh = await this.authService.refresh()
 
     }
 }

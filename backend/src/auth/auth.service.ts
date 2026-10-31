@@ -12,8 +12,12 @@ import { JwtService } from '@nestjs/jwt';
 import type { SignOptions } from "jsonwebtoken";
 import { createHash } from 'crypto';
 import ms from 'ms';
+import { CurrentUser } from '../common/decorator/current-user.decorator.js';
 @Injectable()
 export class AuthService {
+
+    private readonly expiresAt = null;
+    private readonly refExpiresTimeAt = null;
 
     private readonly hashAlog = 'sha256';
     constructor(private readonly prismaService: PrismaService, private readonly configService: ConfigService, private readonly jwt: JwtService) { }
@@ -31,7 +35,7 @@ export class AuthService {
                 }
             })
             if (isUserExists) {
-                throw new ConflictException("Email or Phone is already registered");
+                throw new ConflictException("Email is already registered");
             }
 
             let username = await this.createUserName({ firstName: body.first_name, email: body.email });
@@ -162,39 +166,81 @@ export class AuthService {
 
     }
 
-    async refresh(token: string) {
+    async refresh(token: string, user: any) {
 
         try {
 
-            let payload = await this.jwt.verify(token, {
-                secret: this.configService.getOrThrow("JWT_SECRET")
-            })
-            let newPayload = {
-                sub: payload.id,
-                username: payload.user_name,
-                email: payload.email,
-            }
-            let hashToken = createHash(this.hashAlog).update(token).digest("hex")
+            let jwtSecret = await this.configService.getOrThrow('JWT_SECRET')
 
-            let isValidRef = await this.prismaService.userSession.findFirst({
+            let oldPayload = await this.jwt.verify(token, {
+                secret: jwtSecret
+            })
+
+
+            let session = await this.prismaService.userSession.findFirst({
                 where: {
-                    refreshTokenHash: hashToken,
+                    refreshTokenHash: oldPayload.id,
                     expiresAt: {
                         gt: new Date()
                     }
                 }
             })
-            console.log(isValidRef)
-            // validate this ref through jwt 
-            // extract the payload
-            // made the has and check in database session table its exists or not 
-            // if true then go for new accesstoken and also invalidate the current ref token with new ref token
-            // return this 2 token to the controller
+
+            if (!session) {
+                throw new UnauthorizedException('Invalid refresh token');
+            }
+            if (session.revokedAt != null) {
+
+                // remove this token from the  DB
+                await this.prismaService.userSession.delete({
+                    where: {
+                        id: session.id
+                    }
+                })
+                throw new UnauthorizedException('Somthing went wrong. Please login again');
+            }
 
 
+            let newoldPayload = {
+                sub: oldPayload.id,
+                username: oldPayload.user_name,
+                email: oldPayload.email,
+            }
+
+            let newToken = await this.jwt.signAsync(newoldPayload, {
+                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
+                expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
+            })
+
+            let refExpiresTimeAt = this.configService.getOrThrow<string>("JWT_REFRESH_EXPIRES") as SignOptions["expiresIn"];
+            let newRefreshToken = await this.jwt.signAsync(newoldPayload, {
+                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
+                expiresIn: refExpiresTimeAt
+            });
+
+            let hashToken = createHash(this.hashAlog).update(token).digest("hex")
+
+            let insertedNewToken = await this.prismaService.userSession.update({
+                where: {
+                    id: session.id
+                },
+                data: {
+                    refreshTokenHash: hashToken
+                }
+            })
+
+            if (!insertedNewToken) {
+                throw new UnauthorizedException('Somthing went wrong. Please login again');
+            }
+
+            return {
+                access_token: newToken,
+                refresh_token: newRefreshToken,
+            }
 
 
         } catch (err) {
+            console.log(err)
             throw err;
         }
 

@@ -10,7 +10,7 @@ import bcrypt from "bcrypt"
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { SignOptions } from "jsonwebtoken";
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import ms from 'ms';
 import { CurrentUser } from '../common/decorator/current-user.decorator.js';
 @Injectable()
@@ -35,7 +35,7 @@ export class AuthService {
                 }
             })
             if (isUserExists) {
-                throw new ConflictException("Email is already registered");
+                throw new UnauthorizedException("Email is already registered");
             }
 
             let username = await this.createUserName({ firstName: body.first_name, email: body.email });
@@ -126,20 +126,29 @@ export class AuthService {
             if (!comparedPassword) {
                 throw new UnauthorizedException("Credentials do not match our records")
             }
-
-            let payload = {
+            let loginPayload = {
                 sub: isUser.id,
                 username: isUser.user_name,
                 email: isUser.email,
             }
 
-            let loginToken = await this.jwt.signAsync(payload, {
+            let loginToken = await this.jwt.signAsync(loginPayload, {
                 secret: this.configService.getOrThrow<string>("JWT_SECRET"),
                 expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
             })
 
+
+            const sessionID = randomUUID();
+            let refreshPayload = {
+                sub: isUser.id,
+                sid: sessionID,
+                username: isUser.user_name,
+                email: isUser.email,
+            }
+
+
             let refExpiresTimeAt = this.configService.getOrThrow<string>("JWT_REFRESH_EXPIRES") as SignOptions["expiresIn"];
-            let refreshToken = await this.jwt.signAsync(payload, {
+            let refreshToken = await this.jwt.signAsync(refreshPayload, {
                 secret: this.configService.getOrThrow<string>("JWT_SECRET"),
                 expiresIn: refExpiresTimeAt
             });
@@ -149,6 +158,7 @@ export class AuthService {
 
             await this.prismaService.userSession.create({
                 data: {
+                    session_id: sessionID,
                     user_id: isUser.id,
                     refreshTokenHash: hashRefToken,
                     expiresAt
@@ -172,14 +182,12 @@ export class AuthService {
 
             let jwtSecret = await this.configService.getOrThrow('JWT_SECRET')
 
-            let oldPayload = await this.jwt.verify(token, {
+            let oldPayload = await this.jwt.verifyAsync(token, {
                 secret: jwtSecret
             })
-
-
             let session = await this.prismaService.userSession.findFirst({
                 where: {
-                    refreshTokenHash: oldPayload.id,
+                    session_id: oldPayload.sid,
                     expiresAt: {
                         gt: new Date()
                     }
@@ -187,7 +195,7 @@ export class AuthService {
             })
 
             if (!session) {
-                throw new UnauthorizedException('Invalid refresh token');
+                throw new UnauthorizedException('Somthing went wrong. Please login again');
             }
             if (session.revokedAt != null) {
 
@@ -200,14 +208,17 @@ export class AuthService {
                 throw new UnauthorizedException('Somthing went wrong. Please login again');
             }
 
-
+ 
             let newoldPayload = {
                 sub: oldPayload.id,
+                sid: session.session_id,
                 username: oldPayload.user_name,
                 email: oldPayload.email,
             }
 
-            let newToken = await this.jwt.signAsync(newoldPayload, {
+            const { sid, ...accessPayload } = newoldPayload;
+
+            let newToken = await this.jwt.signAsync(accessPayload, {
                 secret: this.configService.getOrThrow<string>("JWT_SECRET"),
                 expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
             })
@@ -218,14 +229,16 @@ export class AuthService {
                 expiresIn: refExpiresTimeAt
             });
 
-            let hashToken = createHash(this.hashAlog).update(token).digest("hex")
+            let hashToken = createHash(this.hashAlog).update(newRefreshToken).digest("hex")
+            let expiresAt = new Date(Date.now() + ms(refExpiresTimeAt as number));
 
             let insertedNewToken = await this.prismaService.userSession.update({
                 where: {
-                    id: session.id
+                    session_id: sid
                 },
                 data: {
-                    refreshTokenHash: hashToken
+                    refreshTokenHash: hashToken,
+                    expiresAt
                 }
             })
 

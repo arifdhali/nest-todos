@@ -41,7 +41,7 @@ export class AuthController {
             sameSite: "lax",
             secure: process.env.NODE_ENV === "production",
             httpOnly: true,
-            path: "/auth/refresh",
+            path: "/api/auth/refresh",
             maxAge: expires
         })
         console.log('Refresh Token',loggedIn.refresh_token)
@@ -52,10 +52,12 @@ export class AuthController {
     }
 
 
+    @UseGuards(AuthGuard)
     @Post("refresh")
     async refreshToken(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response, @Req() request: Request): Promise<MetaResponse> {
 
-        const refreshToken = request.headers.authorization?.split(" ")[1];
+        
+        const refreshToken = request.cookies?.refresh_token;
         if (!refreshToken) {
             throw new BadGatewayException("refreshToken token is required")
         }
@@ -69,7 +71,7 @@ export class AuthController {
             sameSite: "lax",
             secure: process.env.NODE_ENV === "production",
             httpOnly: true,
-            path: "/auth/refresh",
+            path: "/api/auth/refresh",
             maxAge: expires
         })
         console.log('new_ref token', newRefresh.refresh_token)

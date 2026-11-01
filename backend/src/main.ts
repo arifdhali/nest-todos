@@ -3,7 +3,7 @@ import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor.js';
 import { GlobalFiltersFilter } from './common/filters/global-filters.filter.js';
-
+import cookieParser from 'cookie-parser';
 let port = process.env.SERVER_PORT;
 async function bootstrap() {
 
@@ -24,7 +24,7 @@ async function bootstrap() {
       // },
     }))
 
-
+    app.use(cookieParser())
     app.enableShutdownHooks()
     app.useGlobalInterceptors(new ResponseInterceptor())
     app.useGlobalFilters(new GlobalFiltersFilter())

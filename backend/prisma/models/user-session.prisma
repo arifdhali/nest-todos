@@ -1,7 +1,8 @@
 model UserSession {
   id               String    @id @default(uuid())
+  session_id       String    @unique
   user_id          Int
-  refreshTokenHash String
+  refreshTokenHash String    @unique
   expiresAt        DateTime
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())

@@ -7,10 +7,11 @@ import { UserService } from './user/user.service.js';
 import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PrismaModule } from './prismaConfig/prisma.module.js';
-
+import {ScheduleModule} from "@nestjs/schedule"
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot({cronJobs:true}),
     UserModule,
     AuthModule,
     PrismaModule

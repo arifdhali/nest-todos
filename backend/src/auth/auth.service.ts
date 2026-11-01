@@ -208,7 +208,7 @@ export class AuthService {
                 throw new UnauthorizedException('Somthing went wrong. Please login again');
             }
 
- 
+
             let newoldPayload = {
                 sub: oldPayload.id,
                 sid: session.session_id,
@@ -259,4 +259,24 @@ export class AuthService {
 
     }
 
+
+    async logout(user: any) {
+
+        const session = await this.prismaService.userSession.updateMany({
+            where: {
+                user_id: user.sub,
+                session_id:user.sid,
+                revokedAt: null
+            },
+            data: {
+                revokedAt: new Date()
+            }
+        });
+
+        if (session.count === 0) {
+            throw new UnauthorizedException("Session already expired or revoked");
+        }
+
+        return true
+    }
 }

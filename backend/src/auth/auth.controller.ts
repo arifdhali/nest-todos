@@ -1,4 +1,4 @@
-import { BadGatewayException, Body, Controller, NotFoundException, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadGatewayException, Body, Controller, Get, NotFoundException, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { RegisterDto } from './dtos/register.dto.js';
 import { MetaResponse } from '../common/interceptor/response.interceptor.js';
 import { AuthService } from './auth.service.js';
@@ -44,7 +44,7 @@ export class AuthController {
             path: "/api/auth/refresh",
             maxAge: expires
         })
-        console.log('Refresh Token',loggedIn.refresh_token)
+        console.log('Refresh Token', loggedIn.refresh_token)
         return {
             message: "Login successfull",
             data: { token: loggedIn.login_token }
@@ -56,7 +56,7 @@ export class AuthController {
     @Post("refresh")
     async refreshToken(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response, @Req() request: Request): Promise<MetaResponse> {
 
-        
+
         const refreshToken = request.cookies?.refresh_token;
         if (!refreshToken) {
             throw new BadGatewayException("refreshToken token is required")
@@ -79,7 +79,23 @@ export class AuthController {
             message: "Refresh token  rotate successfully",
         }
 
+    }
 
+    @Get("logout")
+    @UseGuards(AuthGuard)
+    async logout(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response): Promise<MetaResponse> {
 
+        await this.authService.logout(user);
+
+        res.clearCookie('refresh_token', {
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            path: "/api/auth/refresh",
+        });
+
+        return {
+            message: "Logged out successfully"
+        };
     }
 }

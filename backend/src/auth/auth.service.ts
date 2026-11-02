@@ -6,13 +6,14 @@ import { Prisma } from '../generated/prisma/client.js';
 import { LoginDto } from './dtos/login.dto.js';
 import { generatePassword } from 'password-generator';
 import { passwordMinLength } from '../common/constant/constant.js';
+import type { userType } from '../common/constant/constant.js';
 import bcrypt from "bcrypt"
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { SignOptions } from "jsonwebtoken";
 import { createHash, randomUUID } from 'crypto';
 import ms from 'ms';
-import { CurrentUser } from '../common/decorator/current-user.decorator.js';
+
 @Injectable()
 export class AuthService {
 
@@ -176,7 +177,7 @@ export class AuthService {
 
     }
 
-    async refresh(token: string, user: any) {
+    async refresh(token: string) {
 
         try {
 
@@ -260,7 +261,7 @@ export class AuthService {
     }
 
 
-    async logout(user: any) {
+    async logout(user: userType) {
 
         const session = await this.prismaService.userSession.updateMany({
             where: {

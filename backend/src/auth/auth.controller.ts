@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { CurrentUser } from '../common/decorator/current-user.decorator.js';
 
 import { RefreshGuard } from './guard/refresh.guard.js';
+import type { userType } from '../common/constant/constant.js';
 
 @Controller('auth')
 export class AuthController {
@@ -64,7 +65,7 @@ export class AuthController {
 
         const refreshToken = request.cookies?.refresh_token;
 
-        let newRefresh = await this.authService.refresh(refreshToken, 1);
+        let newRefresh = await this.authService.refresh(refreshToken);
 
         let JWT_EXPIRES = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES');
 
@@ -86,7 +87,7 @@ export class AuthController {
 
     @Get("logout")
     @UseGuards(RefreshGuard)
-    async logout(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response): Promise<MetaResponse> {
+    async logout(@CurrentUser() user: userType, @Res({ passthrough: true }) res: Response): Promise<MetaResponse> {
 
         await this.authService.logout(user);
 

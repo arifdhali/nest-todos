@@ -2,6 +2,8 @@ import { BadGatewayException, BadRequestException, ForbiddenException, Injectabl
 import { CreateTodoDto } from './dto/create-todo.dto.js';
 import { UpdateTodoDto } from './dto/update-todo.dto.js';
 import { PrismaService } from '../prismaConfig/prisma.service.js';
+import type { userType } from '../common/constant/constant.js';
+import { FindTodoQueryDto } from './dto/find-todo.dto.js';
 
 @Injectable()
 export class TodosService {
@@ -11,7 +13,7 @@ export class TodosService {
 
 
 
-  async create(user: any, createTodoDto: CreateTodoDto) {
+  async create(user: userType, createTodoDto: CreateTodoDto) {
     return this.prismaService.$transaction(async (tx) => {
 
       let isUser = await tx.users.findFirst({
@@ -126,6 +128,9 @@ export class TodosService {
         }
       })
 
+      // here i need to call notifications services
+      // NotifcationServices()
+
       return {
         msg: "You have added a todo successfully",
         todo: result
@@ -133,8 +138,68 @@ export class TodosService {
     })
   }
 
-  findAll() {
-    return `This action returns all todos`;
+  async findAll(user: userType, query: FindTodoQueryDto) {
+
+
+    const { status, page, perPage } = query;
+    let IsUser = await this.prismaService.users.findFirst({
+      where: {
+        id: user.sub,
+        status: true
+      }
+    })
+
+    if (!IsUser) {
+      throw new BadRequestException("User id not found!")
+    }
+    let skip = (page - 1) * perPage;
+
+    let todos = await this.prismaService.todo.findMany({
+      where: {
+        user_id: user.sub,
+        status: true,
+        completed: status
+      },
+      select: {
+        id: true,
+        subject: true,
+        description: true,
+        shareTodos: {
+          where: {
+            sender_id: user.sub
+          },
+          select: {
+            receiver: {
+              select: {
+                id: true,
+                first_name: true,
+                status: true
+              }
+            }
+          }
+        },
+
+      },
+      take: perPage,
+      skip,
+      orderBy: {
+        created_at: "asc"
+      }
+    })
+
+    let result = todos.map((todo) => {
+
+      return {
+        id: todo.id,
+        subject: todo.subject,
+        description: todo.description,
+        shared_users: todo.shareTodos.map((share) => ({
+          id: share.receiver.id,
+          name: share.receiver.first_name
+        }))
+      }
+    })
+    return result;
   }
 
   findOne(id: number) {

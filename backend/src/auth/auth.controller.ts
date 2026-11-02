@@ -7,10 +7,15 @@ import type { Request, Response } from 'express';
 import ms, { StringValue } from 'ms';
 import { ConfigService } from '@nestjs/config';
 import { CurrentUser } from '../common/decorator/current-user.decorator.js';
-import { AuthGuard } from './guard/auth.guard.js';
+
+import { RefreshGuard } from './guard/refresh.guard.js';
 
 @Controller('auth')
 export class AuthController {
+
+
+    private readonly refreshTokenKEY: string = "refresh_token";
+    private readonly cookiesStorePath: string = "/api/auth";
 
     constructor(private readonly authService: AuthService, private readonly configService: ConfigService) { }
 
@@ -37,11 +42,11 @@ export class AuthController {
             throw new NotFoundException("Refresh token not recieved")
         }
 
-        res.cookie('refresh_token', loggedIn.refresh_token, {
+        res.cookie(this.refreshTokenKEY, loggedIn.refresh_token, {
             sameSite: "lax",
             secure: process.env.NODE_ENV === "production",
             httpOnly: true,
-            path: "/api/auth/refresh",
+            path: this.cookiesStorePath,
             maxAge: expires
         })
         console.log('Refresh Token', loggedIn.refresh_token)
@@ -52,26 +57,24 @@ export class AuthController {
     }
 
 
-    @UseGuards(AuthGuard)
+    @UseGuards(RefreshGuard)
     @Post("refresh")
-    async refreshToken(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response, @Req() request: Request): Promise<MetaResponse> {
+    async refreshToken(@Res({ passthrough: true }) res: Response, @Req() request: Request): Promise<MetaResponse> {
 
 
         const refreshToken = request.cookies?.refresh_token;
-        if (!refreshToken) {
-            throw new BadGatewayException("refreshToken token is required")
-        }
+
         let newRefresh = await this.authService.refresh(refreshToken, 1);
 
         let JWT_EXPIRES = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES');
 
         let expires = ms(JWT_EXPIRES as StringValue);
 
-        res.cookie('refresh_token', newRefresh.refresh_token, {
+        res.cookie(this.refreshTokenKEY, newRefresh.refresh_token, {
             sameSite: "lax",
             secure: process.env.NODE_ENV === "production",
             httpOnly: true,
-            path: "/api/auth/refresh",
+            path: this.cookiesStorePath,
             maxAge: expires
         })
         console.log('new_ref token', newRefresh.refresh_token)
@@ -82,16 +85,16 @@ export class AuthController {
     }
 
     @Get("logout")
-    @UseGuards(AuthGuard)
+    @UseGuards(RefreshGuard)
     async logout(@CurrentUser() user: any, @Res({ passthrough: true }) res: Response): Promise<MetaResponse> {
 
         await this.authService.logout(user);
 
-        res.clearCookie('refresh_token', {
+        res.clearCookie(this.refreshTokenKEY, {
             sameSite: 'lax',
             secure: process.env.NODE_ENV === 'production',
             httpOnly: true,
-            path: "/api/auth/refresh",
+            path: this.cookiesStorePath,
         });
 
         return {

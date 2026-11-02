@@ -47,7 +47,7 @@ export class AuthService {
                     user_name: username,
                     first_name: body.first_name,
                     last_name: body.last_name,
-                    email: body.email,
+                    email: body.email.toLowerCase(),
                     dob: body.dob ? new Date(body.dob) : null,
                     phone: body.phone,
                     country_code: body.country_code,
@@ -265,7 +265,7 @@ export class AuthService {
         const session = await this.prismaService.userSession.updateMany({
             where: {
                 user_id: user.sub,
-                session_id:user.sid,
+                session_id: user.sid,
                 revokedAt: null
             },
             data: {

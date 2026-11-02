@@ -5,7 +5,7 @@ model Todo {
     description String         @db.Text
     shareable   Boolean        @default(false)
     completed   completedState @default(incompleted)
-    status      Boolean        @default(false)
+    status      Boolean        @default(true)
     created_at  DateTime       @default(now())
     updated_at  DateTime       @default(now())
 

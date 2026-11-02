@@ -2,21 +2,21 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConfigModule } from '@nestjs/config';
-import { UserController } from './user/user.controller.js';
-import { UserService } from './user/user.service.js';
 import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { PrismaModule } from './prismaConfig/prisma.module.js';
-import {ScheduleModule} from "@nestjs/schedule"
+import { ScheduleModule } from "@nestjs/schedule"
+import { TodosModule } from './todos/todos.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ScheduleModule.forRoot({cronJobs:true}),
+    ScheduleModule.forRoot({ cronJobs: true }),
     UserModule,
     AuthModule,
-    PrismaModule
+    PrismaModule,
+    TodosModule
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService],
+  controllers: [AppController,],
+  providers: [AppService],
 })
 export class AppModule { }

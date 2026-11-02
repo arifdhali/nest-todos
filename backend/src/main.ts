@@ -10,8 +10,11 @@ async function bootstrap() {
 
   try {
 
-
     const app = await NestFactory.create(AppModule);
+
+
+    app.use(cookieParser())
+
     app.setGlobalPrefix("api", {
       exclude: ['/health']
     })
@@ -24,7 +27,6 @@ async function bootstrap() {
       // },
     }))
 
-    app.use(cookieParser())
     app.enableShutdownHooks()
     app.useGlobalInterceptors(new ResponseInterceptor())
     app.useGlobalFilters(new GlobalFiltersFilter())

@@ -1,14 +1,14 @@
-model TodoHistoryShared {
-    id         Int      @id @default(autoincrement())
+model SharedTodosHistory {
+    id         Int          @id @default(autoincrement())
     todo_id    String
     user_id    Int
     actions    actionsState
-    created_at DateTime @default(now())
-    updated_at DateTime @default(now())
-    todo       Todo     @relation(fields: [todo_id], references: [id])
-    user       Users    @relation("todoHistory", fields: [user_id], references: [id])
+    created_at DateTime     @default(now())
+    updated_at DateTime     @default(now())
+    todo       Todo         @relation(fields: [todo_id], references: [id])
+    user       Users        @relation("todoHistory", fields: [user_id], references: [id])
 
-    @@map("todo_history_shared")
+    @@map("shared_todos_history")
 }
 
 enum actionsState {

@@ -9,9 +9,9 @@ model Todo {
     created_at  DateTime       @default(now())
     updated_at  DateTime       @default(now())
 
-    user       Users               @relation(fields: [user_id], references: [id])
+    user       Users                @relation(fields: [user_id], references: [id])
     shareTodos SharedTodos[]
-    history    TodoHistoryShared[]
+    history    SharedTodosHistory[]
 
     @@index([user_id, created_at])
     @@index([user_id, completed])

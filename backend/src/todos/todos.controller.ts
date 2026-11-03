@@ -9,6 +9,7 @@ import { FindTodoQueryDto } from './dto/find-todo.dto.js';
 import type { userType } from '../common/constant/constant.js';
 
 
+
 @UseGuards(AuthGuard)
 @Controller('todos')
 export class TodosController {
@@ -31,13 +32,50 @@ export class TodosController {
 
   @Get("")
   async findAll(@CurrentUser() user: userType, @Query() query: FindTodoQueryDto): Promise<MetaResponse> {
-
-
     let todo = await this.todosService.findAll(user, query);
     return {
       message: "Todo retrived successfull",
       data: todo
     }
   }
+
+  @Get(":id")
+  async findOne(@CurrentUser() user: userType, @Param() params: { id: string }): Promise<MetaResponse> {
+    const { id: todoID } = params;
+
+    let todo = await this.todosService.findOne(user, todoID);
+
+    return {
+      message: "Todo retrived successfull",
+      data: todo
+    }
+
+  }
+
+
+  @Delete(":id")
+  async delete(@CurrentUser() user: userType, @Param() params: { id: string }, @Query() query: { forceDelete: boolean }) {
+    const { id: todoID } = params;
+    const { forceDelete } = query
+
+    let todo = await this.todosService.remove(user, todoID, forceDelete);
+
+    return {
+      message: "Todo delete successfull",
+      data: todo
+    }
+  }
+
+
+  @Patch(":id/edit")
+  async update(@Param() params: { id: string }, @CurrentUser() user: userType, @Body() body: UpdateTodoDto): Promise<MetaResponse> {
+
+    await this.todosService.update(params, user, body)
+
+    return {
+      message: "Todo updated successfully",
+    }
+  }
+
 
 }

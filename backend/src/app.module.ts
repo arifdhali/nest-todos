@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { PrismaModule } from './prismaConfig/prisma.module.js';
 import { ScheduleModule } from "@nestjs/schedule"
 import { TodosModule } from './todos/todos.module.js';
+import { UsersModule } from './users/users.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -14,7 +15,8 @@ import { TodosModule } from './todos/todos.module.js';
     UserModule,
     AuthModule,
     PrismaModule,
-    TodosModule
+    TodosModule,
+    UsersModule
   ],
   controllers: [AppController,],
   providers: [AppService],

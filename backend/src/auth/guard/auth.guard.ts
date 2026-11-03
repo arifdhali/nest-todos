@@ -15,7 +15,6 @@ export class AuthGuard implements CanActivate {
     if (!authHeader?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Bearer must be include with token");
     }
-
     let token = authHeader.split(" ")[1]
 
     try {
@@ -26,7 +25,7 @@ export class AuthGuard implements CanActivate {
       return true;
 
     } catch (error: any) {
-      throw new UnauthorizedException(error.message)
+      throw new UnauthorizedException("Please login again")
     }
 
 

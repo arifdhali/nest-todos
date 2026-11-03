@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateTodoDto } from './dto/create-todo.dto.js';
 import { UpdateTodoDto } from './dto/update-todo.dto.js';
 import { PrismaService } from '../prismaConfig/prisma.service.js';
@@ -8,10 +8,6 @@ import { FindTodoQueryDto } from './dto/find-todo.dto.js';
 @Injectable()
 export class TodosService {
   constructor(private readonly prismaService: PrismaService) { }
-
-
-
-
 
   async create(user: userType, createTodoDto: CreateTodoDto) {
     return this.prismaService.$transaction(async (tx) => {
@@ -202,15 +198,150 @@ export class TodosService {
     return result;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} todo`;
+  async findOne(user: userType, todo_id: string) {
+
+    await this.getUser(user);
+
+    let todo = await this.prismaService.todo.findFirst({
+      where: {
+        id: todo_id,
+        user_id: user.sub
+      }
+    })
+
+
+    if (!todo) {
+      throw new BadRequestException("Todo not found")
+    }
+
+
+    let sharedTodoHistory = await this.prismaService.sharedTodosHistory.findMany({
+      where: {
+        todo_id: todo_id
+      },
+      omit: {
+        created_at: true
+      }
+    })
+
+    let normalizeUser = [...new Set(sharedTodoHistory)].map((todo) => todo.user_id);
+
+    let sharedUser = await this.prismaService.users.findMany({
+      where: {
+        id: {
+          in: normalizeUser
+        }
+      },
+      select: {
+        first_name: true,
+        last_name: true
+      }
+    })
+
+    let result = sharedTodoHistory.map((history) => {
+      const { user_id, ...otherData } = history;
+      return {
+        ...otherData,
+        receiver: sharedUser.map((user) => `${user.first_name} ${user.last_name}`)
+      }
+    })
+
+    return result;
+
   }
 
-  update(id: number, updateTodoDto: UpdateTodoDto) {
-    return `This action updates a #${id} todo`;
+
+
+  async remove(user: userType, id: string, forceDelete: boolean) {
+
+    await this.getUser(user);
+    let todo = await this.prismaService.todo.findFirst({
+      where: {
+        id: id,
+        user_id: user.sub
+      }
+    })
+
+    if (!todo) {
+      throw new BadRequestException("Todo not found")
+    }
+
+
+    // check whether its has shared user or not 
+
+    let sharedCount = await this.prismaService.sharedTodos.count({
+      where: {
+        todo_id: id
+      }
+    });
+
+    if (sharedCount > 0 && !forceDelete) {
+      return {
+        confirmationRequired: true,
+        shared_count: sharedCount,
+        message: `You have shared this Todo with ${sharedCount} user(s). Do you really want to delete it?`,
+      };
+    }
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.todo.delete({
+        where: { id },
+      });
+    })
+
+    return {
+      success: true,
+      message: 'Todo deleted successfully',
+    }
+
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} todo`;
+  private async getUser(user: Pick<userType, "sub">) {
+    let isUser = await this.prismaService.users.findFirst({
+      where: {
+        id: user.sub,
+        status: true
+      }
+    })
+
+    if (!isUser) {
+      throw new BadRequestException("User id not found!")
+    }
+
+    return isUser;
+  }
+
+
+
+  async update(params: { id: string }, user: userType, updateTodoData: UpdateTodoDto) {
+
+
+    await this.getUser(user)
+
+    let todo = await this.prismaService.todo.findFirst({
+      where: {
+        id: params.id,
+        user_id: user.sub,
+        completed: {
+          not: "completed"
+        }
+      }
+    })
+
+    if (!todo) {
+      throw new BadRequestException("Todo not found")
+    }
+    if (todo.completed) {
+      throw new ConflictException('Completed Todo cannot be updated.');
+    }
+
+    await this.prismaService.todo.update({
+      where: {
+        id: params.id,
+        user_id: user.sub
+      },
+      data: updateTodoData
+    })
+
+    return true;
   }
 }

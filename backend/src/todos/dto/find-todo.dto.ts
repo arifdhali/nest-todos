@@ -1,7 +1,7 @@
 import { Type } from "class-transformer";
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
-enum CompletedState {
+export enum CompletedState {
     completed = 'completed',
     progress = 'progress',
     incompleted = 'incompleted',

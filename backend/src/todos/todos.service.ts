@@ -295,7 +295,7 @@ export class TodosService {
 
   }
 
-  private async getUser(user: Pick<userType, "sub">) {
+  protected async getUser(user: Pick<userType, "sub">) {
     let isUser = await this.prismaService.users.findFirst({
       where: {
         id: user.sub,

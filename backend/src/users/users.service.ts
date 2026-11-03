@@ -1,26 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
+import { userType } from '../common/constant/constant.js';
+import { PrismaService } from '../prismaConfig/prisma.service.js';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
+  constructor(private readonly prismaService: PrismaService) { }
 
-  findAll() {
-    return `This action returns all users`;
-  }
+  async dashboard(user: userType) {
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
+    await this.getActiveUserOrThrow(user);
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    let todos = await this.prismaService.users.findMany({
+      where: {
+        status: true,
+        id: user.sub
+      },
+      select: {
+        todo: {
+          select: {
+            shareTodos: true
+          }
+        },
+      }
+    })
+
+    return todos;
+
+  }
+  protected async getActiveUserOrThrow(user: Pick<userType, "sub">) {
+    let isUser = await this.prismaService.users.findFirst({
+      where: {
+        id: user.sub,
+        status: true
+      }
+    })
+
+    if (!isUser) {
+      throw new BadRequestException("User id not found!")
+    }
+
+    return isUser;
   }
 }

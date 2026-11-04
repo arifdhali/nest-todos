@@ -15,6 +15,7 @@ export class UsersController {
   @Get("")
   async userData(@CurrentUser() user: userType): Promise<MetaResponse> {
 
+
     let userData = await this.usersService.userData(user)
 
     return {

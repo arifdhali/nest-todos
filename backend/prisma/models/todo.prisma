@@ -6,8 +6,8 @@ model Todo {
     shareable   Boolean        @default(false)
     completed   completedState @default(incompleted)
     status      Boolean        @default(true)
-    created_at  DateTime       @default(now())
-    updated_at  DateTime       @default(now())
+    created_at  DateTime       @default(now()) @db.DateTime(3)
+    updated_at  DateTime       @default(now()) @db.DateTime(3)
 
     user       Users                @relation(fields: [user_id], references: [id])
     shareTodos SharedTodos[]

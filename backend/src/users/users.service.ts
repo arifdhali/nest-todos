@@ -9,11 +9,11 @@ export class UsersService {
   constructor(private readonly prismaService: PrismaService) { }
 
   async userData(user: userType) {
-
     await this.getActiveUserOrThrow(user);
 
     let sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    console.log(sevenDaysAgo)
 
 
 

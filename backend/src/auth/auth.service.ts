@@ -18,7 +18,7 @@ import ms from 'ms';
 export class AuthService {
 
     private readonly expiresAt = null;
-    private readonly refExpiresTimeAt = null;
+    private readonly JWT_SECRET = "JWT_SECRET";
 
     private readonly hashAlog = 'sha256';
     constructor(private readonly prismaService: PrismaService, private readonly configService: ConfigService, private readonly jwt: JwtService) { }
@@ -127,30 +127,23 @@ export class AuthService {
             if (!comparedPassword) {
                 throw new UnauthorizedException("Credentials do not match our records")
             }
-            let loginPayload = {
-                sub: isUser.id,
-                username: isUser.user_name,
-                email: isUser.email,
-            }
-
-            let loginToken = await this.jwt.signAsync(loginPayload, {
-                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
-                expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
-            })
-
-
             const sessionID = randomUUID();
-            let refreshPayload = {
+
+            let payload = {
                 sub: isUser.id,
                 sid: sessionID,
                 username: isUser.user_name,
                 email: isUser.email,
             }
 
+            let loginToken = await this.jwt.signAsync(payload, {
+                secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
+                expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
+            })
 
             let refExpiresTimeAt = this.configService.getOrThrow<string>("JWT_REFRESH_EXPIRES") as SignOptions["expiresIn"];
-            let refreshToken = await this.jwt.signAsync(refreshPayload, {
-                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
+            let refreshToken = await this.jwt.signAsync(payload, {
+                secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
                 expiresIn: refExpiresTimeAt
             });
 
@@ -181,7 +174,7 @@ export class AuthService {
 
         try {
 
-            let jwtSecret = await this.configService.getOrThrow('JWT_SECRET')
+            let jwtSecret = await this.configService.getOrThrow(this.JWT_SECRET)
 
             let oldPayload = await this.jwt.verifyAsync(token, {
                 secret: jwtSecret
@@ -211,7 +204,7 @@ export class AuthService {
 
 
             let newoldPayload = {
-                sub: oldPayload.id,
+                sub: oldPayload.sub,
                 sid: session.session_id,
                 username: oldPayload.user_name,
                 email: oldPayload.email,
@@ -220,13 +213,13 @@ export class AuthService {
             const { sid, ...accessPayload } = newoldPayload;
 
             let newToken = await this.jwt.signAsync(accessPayload, {
-                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
+                secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
                 expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
             })
 
             let refExpiresTimeAt = this.configService.getOrThrow<string>("JWT_REFRESH_EXPIRES") as SignOptions["expiresIn"];
             let newRefreshToken = await this.jwt.signAsync(newoldPayload, {
-                secret: this.configService.getOrThrow<string>("JWT_SECRET"),
+                secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
                 expiresIn: refExpiresTimeAt
             });
 

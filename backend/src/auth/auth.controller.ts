@@ -36,6 +36,7 @@ export class AuthController {
     @Post("login")
     async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response): Promise<MetaResponse> {
 
+
         let loggedIn = await this.authService.login(body);
         let JWT_EXPIRES = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES');
         let expires = ms(JWT_EXPIRES as StringValue);
@@ -82,6 +83,8 @@ export class AuthController {
         console.log('new_ref token', newRefresh.refresh_token)
         return {
             message: "Refresh token  rotate successfully",
+            data: { token: newRefresh.access_token }
+
         }
 
     }

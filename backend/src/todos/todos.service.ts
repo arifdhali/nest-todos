@@ -1,5 +1,5 @@
 import { BadGatewayException, BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { CreateTodoDto } from './dto/create-todo.dto.js';
+import { CreateTodoDto, SharedPermissionDto } from './dto/create-todo.dto.js';
 import { UpdateTodoDto } from './dto/update-todo.dto.js';
 import { PrismaService } from '../prismaConfig/prisma.service.js';
 import type { userType } from '../common/constant/constant.js';
@@ -25,16 +25,27 @@ export class TodosService {
       if (!isUser) {
         throw new ForbiddenException("Your account is inactive or unavailable")
       }
+      const sharedUsersList = createTodoDto.shared_with ?? [];
+      let isSelfSharing = createTodoDto.shared_with?.find((u) => u.id == user.sub);
 
-      //  removing owner id and making unique
-      let sharedUsers = [...new Set(createTodoDto.shared_with) ?? []].filter((user_id) => user_id != user.sub);
+      if (isSelfSharing) {
+        throw new ForbiddenException("Self sharing is not allowed")
+      }
 
+      //  removing duplicate id and making unique
+      let uniqueSharedUsers = new Map(createTodoDto.shared_with?.map((users) => [users.id, users] as const))
 
-      if (sharedUsers.length >= 1) {
+      if (sharedUsersList.length != uniqueSharedUsers.size) {
+        throw new ForbiddenException("Duplicate users found!")
+
+      }
+      const sharedUserIds = [...uniqueSharedUsers.keys()];
+
+      if (sharedUserIds.length >= 1) {
         let verifyAllUsers = await tx.users.findMany({
           where: {
             id: {
-              in: sharedUsers
+              in: sharedUserIds
             },
             status: true
           },
@@ -48,33 +59,31 @@ export class TodosService {
           throw new NotFoundException("Given users is not found or Invalid")
         }
 
-        if (sharedUsers.length != verifyAllUsers.length) {
-          throw new BadRequestException('One or more users do not exist or are inactive')
+        if (sharedUserIds.length != verifyAllUsers.length) {
+          throw new BadRequestException('One or more users do not exist')
         }
       }
-
-
-
 
       let todo = await tx.todo.create({
         data: {
           user_id: user.sub,
           subject: createTodoDto.subject,
           description: createTodoDto.description,
-          shareable: sharedUsers.length >= 1
+          shareable: sharedUserIds.length >= 1
         }
       })
 
       if (!todo) {
         throw new BadGatewayException("Todo creation failed")
       }
+      if (uniqueSharedUsers.size > 0) { }
       await tx.sharedTodos.createMany({
-        data: sharedUsers.map((receiver) => ({
+        data: [...uniqueSharedUsers.values()].map((u) => ({
           todo_id: todo.id,
           sender_id: user.sub,
-          reciver_id: receiver,
-          can_read: createTodoDto.shared_permission.read,
-          can_write: createTodoDto.shared_permission.write
+          reciver_id: u.id,
+          can_read: u.read,
+          can_write: u.write
         }))
       })
 

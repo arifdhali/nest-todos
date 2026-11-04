@@ -8,9 +8,13 @@ import { PrismaService } from '../prismaConfig/prisma.service.js';
 export class UsersService {
   constructor(private readonly prismaService: PrismaService) { }
 
-  async dashboard(user: userType) {
+  async userData(user: userType) {
 
     await this.getActiveUserOrThrow(user);
+
+    let sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
 
 
     let todos = await this.prismaService.users.findMany({
@@ -19,12 +23,78 @@ export class UsersService {
         id: user.sub
       },
       select: {
+        id: true,
+        first_name: true,
+        last_name: true,
         todo: {
-          select: {
-            shareTodos: true
-          }
+          where: {
+            created_at: {
+              gt: sevenDaysAgo
+            }
+          },
+          orderBy: {
+            created_at: "desc"
+          },
+          omit: {
+            user_id: true,
+            status: true,
+            updated_at: true
+          },
+          take: 5,
         },
-      }
+        sentTodoShares: {
+          select: {
+            todo_id: true,
+            todo: {
+              select: {
+                subject: true
+              }
+            },
+            can_read: true,
+            can_write: true,
+            receiver: {
+              select: {
+                id: true,
+                first_name: true,
+                last_name: true
+              }
+            },
+          },
+          take: 5
+        },
+        receiveTodoShares: {
+          select: {
+            todo_id: true,
+            todo: {
+              select: {
+                subject: true
+              }
+            },
+            can_read: true,
+            can_write: true,
+            sender: {
+              select: {
+                id: true,
+                first_name: true,
+                last_name: true
+              }
+            },
+          },
+          take: 5
+        },
+        history: {
+          select: {
+            updated_at: true,
+            actions: true,
+            todo: {
+              select: {
+                id: true,
+                subject: true
+              }
+            }
+          }
+        }
+      },
     })
 
     return todos;
@@ -39,7 +109,7 @@ export class UsersService {
     })
 
     if (!isUser) {
-      throw new BadRequestException("User id not found!")
+      throw new BadRequestException("User not found!")
     }
 
     return isUser;

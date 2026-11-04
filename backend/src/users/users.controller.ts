@@ -12,10 +12,10 @@ export class UsersController {
 
 
 
-  @Get("dashboard")
-  async dashboard(@CurrentUser() user: userType): Promise<MetaResponse> {
+  @Get("")
+  async userData(@CurrentUser() user: userType): Promise<MetaResponse> {
 
-    let userData = await this.usersService.dashboard(user)
+    let userData = await this.usersService.userData(user)
 
     return {
       message: "Dashboard retrived successfull",

@@ -203,22 +203,22 @@ export class AuthService {
             }
 
 
-            let newoldPayload = {
+            let newPayload = {
                 sub: oldPayload.sub,
                 sid: session.session_id,
                 username: oldPayload.user_name,
                 email: oldPayload.email,
             }
 
-            const { sid, ...accessPayload } = newoldPayload;
+            const { sid } = newPayload;
 
-            let newToken = await this.jwt.signAsync(accessPayload, {
+            let newToken = await this.jwt.signAsync(newPayload, {
                 secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
                 expiresIn: this.configService.getOrThrow<string>("JWT_LOGIN_EXPIRES") as SignOptions["expiresIn"]
             })
 
             let refExpiresTimeAt = this.configService.getOrThrow<string>("JWT_REFRESH_EXPIRES") as SignOptions["expiresIn"];
-            let newRefreshToken = await this.jwt.signAsync(newoldPayload, {
+            let newRefreshToken = await this.jwt.signAsync(newPayload, {
                 secret: this.configService.getOrThrow<string>(this.JWT_SECRET),
                 expiresIn: refExpiresTimeAt
             });

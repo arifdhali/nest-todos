@@ -15,6 +15,15 @@ import type { userType } from '../common/constant/constant.js';
 export class TodosController {
   constructor(private readonly todosService: TodosService) { }
 
+  @Get("")
+  async findAll(@CurrentUser() user: userType, @Query() query: FindTodoQueryDto): Promise<MetaResponse> {
+    let todo = await this.todosService.findAll(user, query);
+    return {
+      message: "Todo retrived successfull",
+      data: todo
+    }
+  }
+
 
 
   @Post("create")
@@ -30,14 +39,6 @@ export class TodosController {
   }
 
 
-  @Get("")
-  async findAll(@CurrentUser() user: userType, @Query() query: FindTodoQueryDto): Promise<MetaResponse> {
-    let todo = await this.todosService.findAll(user, query);
-    return {
-      message: "Todo retrived successfull",
-      data: todo
-    }
-  }
 
   @Get(":id")
   async findOne(@CurrentUser() user: userType, @Param() params: { id: string }): Promise<MetaResponse> {

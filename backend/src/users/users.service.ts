@@ -13,7 +13,6 @@ export class UsersService {
 
     let sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    console.log(sevenDaysAgo)
 
 
 
@@ -97,7 +96,26 @@ export class UsersService {
       },
     })
 
-    return todos;
+
+    let result = todos.map(({ history: shareHistory, receiveTodoShares, sentTodoShares, ...rest }) => ({
+      ...rest,
+      history: shareHistory.map((his) => {
+        return {
+          ...his.todo,
+          actions: his.actions,
+          updated_at: his.updated_at,
+        }
+      }),
+      reciveTodo: receiveTodoShares.map(({ todo, ...rest }) => ({
+        ...todo,
+        ...rest
+      })),
+      sendTodo: sentTodoShares.map(({ todo, ...rest }) => ({
+        ...todo,
+        ...rest
+      })),
+    }))[0]
+    return result;
 
   }
   protected async getActiveUserOrThrow(user: Pick<userType, "sub">) {

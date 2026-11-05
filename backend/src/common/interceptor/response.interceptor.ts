@@ -1,5 +1,5 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
-import { map, Observable } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 
 // from controller response
 export interface MetaResponse<T = any> {
@@ -20,8 +20,17 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, GlobalReponseF
   intercept(context: ExecutionContext, next: CallHandler): Observable<GlobalReponseFormat<T>> {
 
     const response = context.switchToHttp().getResponse();
+    const request = context.switchToHttp().getRequest();
 
-    return next.handle().pipe(map((result) => ({
+    let HIT_API = request.route.path;
+
+    console.count(`${HIT_API} is hit `)
+    const startTime = Date.now();
+    return next.handle().pipe(tap((data) => {
+      const duration = Date.now() - startTime;
+      console.log(`3. Executed AFTER the handler. Response time: ${duration}ms`);
+      console.log('Response Data:', data);
+    }), map((result) => ({
       success: true,
       statusCode: response.statusCode,
       message: result?.message ?? "Global msg",

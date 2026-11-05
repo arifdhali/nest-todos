@@ -147,16 +147,7 @@ export class TodosService {
 
 
     const { status, page, perPage } = query;
-    let IsUser = await this.prismaService.users.findFirst({
-      where: {
-        id: user.sub,
-        status: true
-      }
-    })
-
-    if (!IsUser) {
-      throw new BadRequestException("User id not found!")
-    }
+    await this.getUser(user);
     let skip = (page - 1) * perPage;
 
     let todos = await this.prismaService.todo.findMany({

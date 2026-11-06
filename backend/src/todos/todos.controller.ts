@@ -55,15 +55,15 @@ export class TodosController {
 
 
   @Delete(":id")
-  async delete(@CurrentUser() user: userType, @Param() params: { id: string }, @Query() query: { forceDelete: boolean }) {
+  async delete(@CurrentUser() user: userType, @Param() params: { id: string }, @Query() query: { forceDelete: boolean }): Promise<MetaResponse> {
     const { id: todoID } = params;
     const { forceDelete } = query
 
     let todo = await this.todosService.remove(user, todoID, forceDelete);
-
+    const { message, ...others } = todo;
     return {
-      message: "Todo delete successfull",
-      data: todo
+      message: message,
+      data: others
     }
   }
 

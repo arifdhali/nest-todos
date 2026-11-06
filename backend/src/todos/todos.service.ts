@@ -289,7 +289,6 @@ export class TodosService {
     })
 
     return {
-      success: true,
       message: 'Todo deleted successfully',
     }
 
@@ -330,7 +329,8 @@ export class TodosService {
     if (!todo) {
       throw new BadRequestException("Todo not found")
     }
-    if (todo.completed) {
+
+    if (todo.completed == "completed") {
       throw new ConflictException('Completed Todo cannot be updated.');
     }
 

@@ -13,7 +13,8 @@ export const createPrismaClient = (configService: ConfigService) => {
         port: Number(decodeURIComponent(url.port ?? 5000)),
         user: decodeURIComponent(url.username),
         password: decodeURIComponent(url.password),
-        database: dbName
+        database: dbName,
+        connectionLimit: 2
     })
     return adapter;
 }

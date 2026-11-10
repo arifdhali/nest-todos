@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor.js';
 import { GlobalFiltersFilter } from './common/filters/global-filters.filter.js';
 import cookieParser from 'cookie-parser';
@@ -11,13 +11,18 @@ async function bootstrap() {
   try {
 
     const app = await NestFactory.create(AppModule);
+    app.useSecurityHeaders();
 
 
     app.use(cookieParser())
+    app.enableVersioning({
+      type: VersioningType.URI
+    })
 
     app.setGlobalPrefix("api", {
       exclude: ['/health']
     })
+
     app.useGlobalPipes(new ValidationPipe({
       transform: true,
       whitelist: true,

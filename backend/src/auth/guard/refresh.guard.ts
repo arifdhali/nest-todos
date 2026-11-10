@@ -15,7 +15,7 @@ export class RefreshGuard implements CanActivate {
         let refreshToken = req.cookies?.refresh_token;
 
         if (!refreshToken) {
-            throw new UnauthorizedException("Refresh token is required");
+            throw new UnauthorizedException("Please login again!");
         }
 
         try {

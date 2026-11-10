@@ -24,12 +24,12 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, GlobalReponseF
 
     let HIT_API = request.route.path;
 
-    console.count(`${HIT_API} is hit `)
+    // console.count(`${HIT_API} is hit `)
     const startTime = Date.now();
     return next.handle().pipe(tap((data) => {
       const duration = Date.now() - startTime;
-      console.log(`3. Executed AFTER the handler. Response time: ${duration}ms`);
-      console.log('Response Data:', data);
+      // console.log(`3. Executed AFTER the handler. Response time: ${duration}ms`);
+      // console.log('Response Data:', data);
     }), map((result) => ({
       success: true,
       statusCode: response.statusCode,

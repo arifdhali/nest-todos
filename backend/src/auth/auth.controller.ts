@@ -12,7 +12,10 @@ import { RefreshGuard } from './guard/refresh.guard.js';
 import type { userType } from '../common/constant/constant.js';
 
 
-@Controller('auth')
+@Controller({
+    version: '1',
+    path: "auth",
+})
 export class AuthController {
 
 

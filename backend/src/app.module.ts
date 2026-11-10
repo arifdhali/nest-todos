@@ -20,7 +20,7 @@ import { join } from 'path';
         layout: 'layout',
         cache: process.env.NODE_ENV == "porduction",
       }),
-      from:`Test <test@gmail.com>`
+      from: `Test <test@gmail.com>`
     }),
     AuthModule,
     PrismaModule,

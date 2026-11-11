@@ -7,6 +7,7 @@ import { Eye, EyeOff, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoginApi } from "@/lib/api/Auth";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -26,7 +27,7 @@ export default function LoginPage() {
         }));
     }
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(e: HTMLFormElement) {
         e.preventDefault();
         setError("");
 
@@ -34,19 +35,9 @@ export default function LoginPage() {
             setError("Please fill in all fields.");
             return;
         }
-
-        setLoading(true);
-
-        try {
-            // TODO: Connect to your NestJS login API.
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            router.push("/dashboard");
-        } catch {
-            setError("Something went wrong. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+        // setLoading(true);
+        let api = await LoginApi(form)
+        console.log(api)
     }
 
     return (

@@ -8,13 +8,13 @@ export class MailService implements OnModuleInit {
     private readonly from: string;
 
     constructor() {
-        this.transporter = nodemailer.createTransport({})
+        // this.transporter = nodemailer.createTransport({})
     }
 
 
     async onModuleInit() {
         try {
-            await this.transporter.verify()
+            // await this.transporter.verify()
         } catch (error) {
 
         }

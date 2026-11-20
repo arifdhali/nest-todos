@@ -40,8 +40,10 @@ export default function Header() {
                     <Button variant="ghost" >
                         <Link href="/login">Login</Link>
                     </Button>
-
-                    <Button className="bg-violet-600 hover:bg-violet-700">
+                    <Button>
+                        <Link href={"/dashboard"}> Dashboard</Link>
+                    </Button>
+                    <Button className=" hover:bg-violet-700">
                         <Link href="/register">Get Started</Link>
                     </Button>
                 </div>

@@ -1,0 +1,416 @@
+1. Complete Redis production use-case list
+A. Caching – Very common
+High production usage
+#	Use case	Real-world example
+1	Database query caching	Cache frequently requested products
+2	API response caching	Cache /api/products responses
+3	User profile caching	Cache user information
+4	Product detail caching	Cache product details
+5	Category caching	Cache product categories
+6	Permission caching	Cache user permissions
+7	Configuration caching	Cache application settings
+8	Dashboard caching	Cache dashboard statistics
+9	Search result caching	Cache frequently searched keywords
+10	Computed result caching	Cache expensive calculations
+11	GraphQL response caching	Cache GraphQL query results
+12	CMS content caching	Cache published articles
+
+Example:
+
+Without Redis:
+Client
+  |
+  v
+NestJS API
+  |
+  v
+MySQL
+  |
+  v
+Return response
+
+
+With Redis:
+Client
+  |
+  v
+NestJS API
+  |
+  v
+Redis
+  |
+  |-- Cache HIT --> Return response
+  |
+  |-- Cache MISS
+         |
+         v
+       MySQL
+         |
+         v
+       Store in Redis
+         |
+         v
+       Return response
+
+
+B. Authentication and session management
+#	Use case	Real-world example
+13	Session storage	Store login sessions
+14	Refresh token management	Store refresh token metadata
+15	Token revocation	Revoke access or refresh tokens
+16	Active session tracking	Show logged-in devices
+17	OTP storage	Store email verification OTP
+18	Password reset tokens	Temporary password reset token
+19	Login attempt tracking	Count failed login attempts
+20	Temporary account locks	Lock login after repeated failures
+21	Temporary authentication state	Store OAuth login state
+22	Device tracking	Track active device sessions
+
+Example:
+
+A user logs in from two devices:
+User
+ ├── Chrome
+ │    └── Session ID: session_101
+ │
+ └── Mobile
+      └── Session ID: session_102
+
+
+Redis can maintain the active session information and allow you to revoke a particular session.
+
+Important: Redis should not automatically become your only permanent authentication record. Keep the appropriate durable records in your database.
+C. Rate limiting and API protection
+#	Use case	Real-world example
+23	API rate limiting	100 requests per minute
+24	Login rate limiting	5 login attempts per minute
+25	OTP rate limiting	3 OTP requests per 10 minutes
+26	IP-based limiting	Limit requests per IP
+27	User-based limiting	Limit requests per user
+28	Endpoint-specific limiting	Different limits for different APIs
+29	Brute-force protection	Prevent repeated password attempts
+30	Distributed rate limiting	Share counters across multiple NestJS instances
+
+The last one is particularly important.
+
+Suppose you have:
+              Load Balancer
+                    |
+          ---------------------
+          |                   |
+       NestJS 1            NestJS 2
+          |                   |
+          -------- Redis ------
+
+
+If you store rate-limit counters in Node.js memory, each instance has a separate counter.
+
+Redis provides a shared counter.
+
+This makes rate limiting consistent across instances.
+D. Background jobs and message queues
+High production usage
+#	Use case	Real-world example
+31	Background job queues	Process tasks asynchronously
+32	Email queues	Send verification and notification emails
+33	SMS queues	Send OTP and SMS notifications
+34	Video processing	Compress and convert uploaded videos
+35	Image processing	Resize and optimize images
+36	PDF generation	Generate invoices and reports
+37	Payment processing jobs	Process payment-related workflows
+38	Retry mechanisms	Retry failed jobs
+39	Delayed jobs	Send an email after 24 hours
+40	Scheduled jobs	Execute tasks at a scheduled time
+41	Priority queues	Process premium customers first
+42	Job progress tracking	Track video processing percentage
+43	Dead-letter handling	Store repeatedly failed jobs for inspection
+44	Worker coordination	Distribute jobs across multiple workers
+
+Example architecture:
+NestJS API
+
+Create order / upload video
+
+Redis + BullMQ
+
+Queue jobs, delays, retries
+
+Worker 1
+
+Email processing
+
+
+Worker 2
+
+Video processing
+
+
+
+MySQL / External services
+
+Persist business data and perform external operations
+
+
+For your NestJS learning, BullMQ is a particularly useful Redis-based technology. Redis Streams are another option when you need persistent event consumption, consumer groups, and replay. 
+Docs+1
+
+E. Real-time applications and WebSockets
+High production usage
+#	Use case	Real-world example
+45	WebSocket scaling	Share events across NestJS instances
+46	Online user tracking	Show who is currently online
+47	User presence	Online / offline / away
+48	Live editing tracking	Show who is editing a document
+49	Typing indicators	Show someone is typing
+50	Real-time chat	Broadcast chat messages
+51	Live notifications	Deliver notifications instantly
+52	Live dashboard	Update metrics without refreshing
+53	Real-time comments	Display new comments immediately
+54	Live collaboration	Multiple users editing the same resource
+55	WebSocket room coordination	Synchronize rooms across instances
+56	Cache invalidation broadcasts	Notify servers that cached data changed
+
+Your Todo application is a good example.
+
+Suppose three users open the same shared todo:
+Todo: Complete Redis implementation
+
+Users currently viewing:
+  - User 101
+  - User 102
+  - User 103
+
+Live viewers: 3
+
+
+Redis can maintain shared presence information across multiple NestJS instances.
+
+One possible structure:
+todo:123:viewers
+    user:101
+    user:102
+    user:103
+
+
+Use a Redis Set for unique viewers, and expiration/heartbeat logic to remove disconnected users.
+
+For WebSocket broadcasting across multiple server instances, Redis Pub/Sub is useful. Remember that Pub/Sub is at-most-once: offline subscribers miss messages. Use Streams or another durable messaging system when replay and reliable processing are required. 
+Docs+1
+
+F. Distributed systems and coordination
+This category becomes important when your application has multiple instances.
+#	Use case	Real-world example
+57	Distributed locks	Prevent two workers processing the same resource concurrently
+58	Leader election	Select one active scheduler
+59	Distributed counters	Maintain shared request counters
+60	Idempotency keys	Prevent duplicate request processing
+61	Duplicate event detection	Avoid processing the same event twice
+62	Distributed semaphores	Limit concurrent operations
+63	Worker coordination	Coordinate multiple worker processes
+64	Temporary reservations	Temporarily reserve a product
+65	Inventory coordination	Reduce simultaneous inventory conflicts
+66	Cache invalidation	Synchronize cache updates
+67	Maintenance flags	Temporarily disable selected application features
+68	Distributed configuration	Share dynamic application flags
+
+Example: Distributed lock
+
+Suppose two customers try to purchase the last available product.
+Customer A --------\
+                    \
+                     NestJS API
+                    /
+Customer B --------/
+
+       Both request the last item
+                  |
+                  v
+             Redis Lock
+                  |
+          Only one proceeds
+                  |
+                  v
+             MySQL update
+
+
+Important: Redis locks are not a replacement for database transactions, unique constraints, or atomic inventory updates. For inventory, use database-level concurrency control as the final protection.
+G. Real-time analytics and counters
+#	Use case	Real-world example
+69	Page view counters	Count page visits
+70	Product view counters	Count product views
+71	Unique visitors	Count unique visitors
+72	Live user counters	Count active users
+73	API usage analytics	Count requests per endpoint
+74	Sales counters	Display live sales statistics
+75	Download counters	Count file downloads
+76	Trending products	Find popular products
+77	Trending articles	Find popular posts
+78	Real-time dashboards	Display live statistics
+79	Rolling-window metrics	Count events in the last 5 minutes
+80	Time-series metrics	Monitor server CPU and memory
+81	Fraud detection signals	Detect unusual transaction patterns
+
+Example:
+product:101:views = 1500
+product:102:views = 900
+product:103:views = 2500
+
+
+You can use Redis counters and Sorted Sets to rank popular products.
+H. Leaderboards, ranking and scoring
+#	Use case	Real-world example
+82	Gaming leaderboards	Highest-scoring players
+83	E-commerce rankings	Top-selling products
+84	Most viewed content	Popular articles
+85	User reputation	Ranking users by points
+86	Employee performance	Rank sales employees
+87	Trending hashtags	Rank popular hashtags
+88	Priority scheduling	Order tasks by priority
+
+Redis Sorted Sets are particularly useful because members are automatically ordered by their scores. 
+Docs+1
+
+I. Geospatial and location-based applications
+#	Use case	Real-world example
+89	Nearby search	Find nearby restaurants
+90	Driver tracking	Track delivery drivers
+91	Delivery tracking	Track order locations
+92	Nearby users	Find nearby users
+93	Store locator	Find nearest branches
+94	Vehicle tracking	Track fleet locations
+95	Location-based recommendations	Recommend nearby services
+96	Geofence support	Detect entry into a geographic area
+
+Example:
+Customer location:
+  Latitude: 22.5726
+  Longitude: 88.3639
+
+Find drivers:
+  Within 5 KM
+
+
+Redis geospatial indexes can help with nearby-location queries. 
+Redis+1
+
+J. Search and recommendation systems
+#	Use case	Real-world example
+97	Full-text search	Search articles
+98	Autocomplete	Product name suggestions
+99	Search suggestions	Popular search terms
+100	Secondary indexing	Fast lookup by selected attributes
+101	Product recommendations	Recommend similar products
+102	Personalized feeds	Recommend content per user
+103	Semantic search	Search by meaning
+104	Vector similarity search	Find similar products using embeddings
+105	Hybrid search	Combine text and vector search
+
+Some of these require Redis Stack or the relevant Redis modules/features rather than only basic Redis data structures. 
+Redis+1
+
+K. AI and machine learning applications
+#	Use case	Real-world example
+106	AI conversation memory	Store conversation context
+107	Semantic caching	Reuse responses to similar questions
+108	RAG retrieval	Retrieve relevant document chunks
+109	Vector storage	Store embeddings
+110	Recommendation features	Store precomputed user features
+111	Feature store	Serve ML features quickly
+112	AI agent memory	Maintain agent context
+113	Semantic routing	Route requests based on meaning
+114	AI response caching	Avoid repeated expensive model calls
+
+Redis can serve as a vector database and a low-latency retrieval layer for AI applications. 
+Redis+1
+
+L. Temporary data and workflow management
+#	Use case	Real-world example
+115	Temporary shopping carts	Store guest shopping carts
+116	Checkout state	Maintain temporary checkout progress
+117	Temporary reservations	Hold seats during checkout
+118	Email verification state	Store verification status
+119	Multi-step workflows	Maintain temporary workflow state
+120	Password reset state	Store temporary reset information
+121	Temporary upload state	Track multipart uploads
+122	One-time tokens	Store tokens with expiration
+123	Temporary locks	Prevent duplicate operations
+124	Temporary data cleanup	Automatically expire old keys
+
+
+2. Redis data structures and where to use them
+Understanding these is more important than memorizing 124 use cases.
+
+Redis has different data structures, and each solves a different type of problem.
+Redis data structure	Best production use cases
+String	Cache, OTP, counters, tokens
+Hash	User profiles, session metadata
+List	Simple queues, task lists
+Set	Unique visitors, online users, tags
+Sorted Set	Leaderboards, rankings, priority queues
+Stream	Event processing, durable queues, consumer groups
+Bitmap	Daily active users, attendance tracking
+HyperLogLog	Approximate unique visitor counting
+Geospatial	Nearby drivers, stores, delivery tracking
+JSON	Nested objects, document caching
+Time Series	Monitoring, metrics, sensor data
+Vector Sets / vector search capabilities	Semantic search, AI recommendations
+
+
+Redis+1
+3. My recommended Redis learning priority
+Don't try to implement all 124 use cases. Learn the important production patterns first.
+Redis production learning roadmap
+1. Level 1 – Fundamentals
+   Must learn
+   - Strings, Hashes, Lists, Sets
+   - TTL and expiration
+   - Redis transactions
+   - Atomic operations
+   - Persistence
+2. Level 2 – Backend essentials
+   Must learn
+   - Cache-aside pattern
+   - Cache invalidation
+   - Session management
+   - OTP storage
+   - Rate limiting
+   - Distributed counters
+3. Level 3 – Background processing
+   Must learn
+   - BullMQ
+   - Job retries
+   - Delayed jobs
+   - Priority queues
+   - Job progress
+   - Failed job handling
+   - Worker concurrency
+4. Level 4 – Real-time systems
+   - Redis Pub/Sub
+   - Redis Streams
+   - WebSocket scaling
+   - Online user tracking
+   - Typing indicators
+   - Live collaboration
+5. Level 5 – Distributed systems
+   - Distributed locks
+   - Leader election
+   - Idempotency
+   - Distributed coordination
+   - Multiple application instances
+6. Level 6 – Advanced applications
+   - Sorted Sets and leaderboards
+   - Geospatial queries
+   - Time Series
+   - Search
+   - Vector search
+   - AI memory and semantic caching
+7. Level 7 – Production infrastructure
+   - Redis Sentinel
+   - Redis Cluster
+   - Replication
+   - Memory management
+   - Eviction policies
+   - Monitoring
+   - Backups and recovery
+   - High availability
+   - Security and TLS
